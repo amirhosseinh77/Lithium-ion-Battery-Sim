@@ -1,3 +1,3 @@
 # Battery-Management-System
 
-![out1](https://user-images.githubusercontent.com/56114938/195864638-e88ebbd0-50c9-45a7-9d01-7dc95721f73f.jpg)
+![out1](https://user-images.githubusercontent.com/56114938/195864885-45188bf7-34ca-4940-b756-6dcf2d39209e.jpg)
