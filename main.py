@@ -3,7 +3,7 @@ from elements.plots import plot_SOC
 import cv2
 
 
-LIB1 = LithiumIonBattery('PANmodel.mat', T=25, dt=1)
+LIB1 = LithiumIonBattery('models/PANmodel.mat', T=25, dt=1)
 
 Z = []
 V = []
