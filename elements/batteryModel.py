@@ -14,7 +14,7 @@ class LithiumIonBattery():
         self.MParam = data['model']['MParam'][self.temps.index(T)]
         self.R0Param = data['model']['R0Param'][self.temps.index(T)]
         self.RCParam = np.array(data['model']['RCParam'][self.temps.index(T)])
-        self.RParam = np.array(data['model']['RParam'][self.temps.index(25)])
+        self.RParam = np.array(data['model']['RParam'][self.temps.index(T)])
 
         self.OCVfromSOC = make_OCVfromSOCtemp(data, T)
 
@@ -32,7 +32,7 @@ class LithiumIonBattery():
 
         z_k1 = self.z_k - (eta*self.dt/(3600*self.QParam))*current
         iR_k1 = Arc@self.iR_k + Brc*current
-        h_k1 = Ah*self.h_k + (1-Ah)*np.sign(current)
+        h_k1 = Ah*self.h_k - (1-Ah)*np.sign(current)
 
         z_k1 = np.clip(z_k1, -0.05, 1.05)
         h_k1 = np.clip(h_k1, -1, 1)

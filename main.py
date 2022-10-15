@@ -8,8 +8,8 @@ LIB1 = LithiumIonBattery('models/PANmodel.mat', T=25, dt=1)
 Z = []
 V = []
 while True:
-    if LIB1.z_k > 0.8: i = 100
-    if LIB1.z_k < 0.2: i = -100
+    if LIB1.z_k > 0.8: i = 1000
+    if LIB1.z_k < 0.2: i = -1000
     
     v = LIB1.update_state(i)
     cv2.imshow('My Battery', plot_SOC(int(LIB1.z_k*100)))
