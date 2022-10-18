@@ -3,6 +3,6 @@
 ![out1](https://user-images.githubusercontent.com/56114938/195864885-45188bf7-34ca-4940-b756-6dcf2d39209e.jpg)
 
 - [x] Battery Model
-- [ ] Extended Kalman Filter
+- [x] Extended Kalman Filter
 - [ ] Sigma-point Kalman Filter
 - [ ] SOC estimation
