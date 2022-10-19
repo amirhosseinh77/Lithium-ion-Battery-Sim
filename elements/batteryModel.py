@@ -55,3 +55,15 @@ def make_OCVfromSOCtemp(data, T):
     OCV = OCV0 + T*OCVrel
     OCVfromSOC = interpolate.interp1d(SOC, OCV, fill_value="extrapolate")
     return OCVfromSOC
+
+def make_dOCVfromSOCtemp(data, T):
+    SOC = np.array(data['model']['SOC'])
+    OCV0 = np.array(data['model']['OCV0'])
+    OCVrel = np.array(data['model']['OCVrel'])
+    OCV = OCV0 + T*OCVrel
+
+    dZ = xnew[1] - xnew[0]
+    dUdZ = np.diff(OCV)/dZ
+    dOCV = (np.append(dUdZ[0],dUdZ) + np.append(dUdZ,dUdZ[-1]))/2
+    dOCVfromSOC = interpolate.interp1d(SOC, dOCV, fill_value="extrapolate")
+    return dOCVfromSOC
