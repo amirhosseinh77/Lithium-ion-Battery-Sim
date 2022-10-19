@@ -47,7 +47,6 @@ class LithiumIonBattery():
         return voltage.item()
 
 
-
 def make_OCVfromSOCtemp(data, T):
     SOC = np.array(data['model']['SOC'])
     OCV0 = np.array(data['model']['OCV0'])
@@ -62,7 +61,7 @@ def make_dOCVfromSOCtemp(data, T):
     OCVrel = np.array(data['model']['OCVrel'])
     OCV = OCV0 + T*OCVrel
 
-    dZ = xnew[1] - xnew[0]
+    dZ = SOC[1] - SOC[0]
     dUdZ = np.diff(OCV)/dZ
     dOCV = (np.append(dUdZ[0],dUdZ) + np.append(dUdZ,dUdZ[-1]))/2
     dOCVfromSOC = interpolate.interp1d(SOC, dOCV, fill_value="extrapolate")
