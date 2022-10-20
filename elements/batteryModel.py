@@ -2,7 +2,7 @@ import numpy as np
 from scipy import interpolate
 from mat4py import loadmat
 
-class LithiumIonBattery():
+class LithiumIonBattery:
     def __init__(self, model_path, T, dt):
         data = loadmat(model_path)
         self.name = data['model']['name']
@@ -15,7 +15,6 @@ class LithiumIonBattery():
         self.R0Param = data['model']['R0Param'][self.temps.index(T)]
         self.RCParam = np.array(data['model']['RCParam'][self.temps.index(T)])
         self.RParam = np.array(data['model']['RParam'][self.temps.index(T)])
-
         self.OCVfromSOC = make_OCVfromSOCtemp(data, T)
 
         self.sik = 0
@@ -34,7 +33,6 @@ class LithiumIonBattery():
         z_k1 = self.z_k - (eta*self.dt/(3600*self.QParam))*current
         iR_k1 = Arc@self.iR_k + Brc*current
         h_k1 = Ah*self.h_k - (1-Ah)*np.sign(current)
-
         z_k1 = np.clip(z_k1, -0.05, 1.05)
         h_k1 = np.clip(h_k1, -1, 1)
 

@@ -1,4 +1,5 @@
 from elements.batteryModel import LithiumIonBattery, make_OCVfromSOCtemp, make_dOCVfromSOCtemp
+from elements.estimator import SPKF
 from elements.plots import plot_SOC
 import cv2
 import numpy as np
