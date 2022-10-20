@@ -32,7 +32,9 @@ while True:
     if LIB1.z_k > 0.8: i = 1000
     if LIB1.z_k < 0.2: i = -1000
     
-    v = LIB1.update_state(i)
+    newState = LIB1.stateEqn(i)
+    voltage = LIB1.outputEqn(i)
+    LIB1.updateState(newState)
     cv2.imshow('My Battery', plot_SOC(int(LIB1.z_k*100)))
     cv2.waitKey(1)
     # Z.append(LIB1.z_k)

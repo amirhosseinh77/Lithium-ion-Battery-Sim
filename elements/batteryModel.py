@@ -23,8 +23,9 @@ class LithiumIonBattery():
         self.z_k = 1
         self.iR_k = np.zeros((1,1))
         self.h_k = 0
-        
-    def update_state(self, current):
+
+    def stateEqn(self, current, xnoise=0):
+        current = current + xnoise
         eta=self.etaParam if current<0 else 1
         Ah = np.exp(-abs(eta*current*self.GParam*self.dt/(3600*self.QParam)))  # hysteresis factor
         Arc = np.diag(np.exp(-self.dt/abs(self.RCParam)))
@@ -38,14 +39,17 @@ class LithiumIonBattery():
         h_k1 = np.clip(h_k1, -1, 1)
 
         if abs(current)>self.QParam/100: self.sik = np.sign(current)
-        voltage = self.OCVfromSOC(self.z_k) + self.MParam*self.h_k + self.M0Param*self.sik - self.RParam*self.iR_k - self.R0Param*current
+        return (z_k1, iR_k1, h_k1)
 
+    def outputEqn(self, current, ynoise=0):
+        voltage = self.OCVfromSOC(self.z_k) + self.MParam*self.h_k + self.M0Param*self.sik - self.RParam*self.iR_k - self.R0Param*current + ynoise
+        return voltage.item()
+
+    def updateState(self, newState):
+        (z_k1, iR_k1, h_k1) = newState
         self.z_k = z_k1
         self.iR_k = iR_k1
         self.h_k = h_k1
-
-        return voltage.item()
-
 
 def make_OCVfromSOCtemp(data, T):
     SOC = np.array(data['model']['SOC'])
