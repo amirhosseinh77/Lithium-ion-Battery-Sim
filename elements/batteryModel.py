@@ -19,28 +19,51 @@ class LithiumIonBattery:
 
         self.sik = 0
         self.dt = dt
-        self.z_k = 1
+        self.z_k = np.ones((1,1))
         self.iR_k = np.zeros((1,1))
-        self.h_k = 0
+        self.h_k = np.zeros((1,1))
 
-    def stateEqn(self, current, xnoise=0):
+    def stateEqn(self, current, xnoise=0, oldState=None):
+        if oldState is not None: 
+            (z_k, iR_k, h_k) = oldState
+            z_k =  z_k.reshape(1,-1)
+            iR_k = iR_k.reshape(1,-1)
+            h_k =  h_k.reshape(1,-1)
+        else:
+            z_k =  self.z_k.reshape(1,-1)
+            iR_k = self.iR_k.reshape(1,-1)
+            h_k =  self.h_k.reshape(1,-1)
+
+        prisik = self.sik
         current = current + xnoise
-        eta=self.etaParam if current<0 else 1
+        eta = np.where(current<0, self.etaParam, 1) #self.etaParam if current<0 else 1
         Ah = np.exp(-abs(eta*current*self.GParam*self.dt/(3600*self.QParam)))  # hysteresis factor
         Arc = np.diag(np.exp(-self.dt/abs(self.RCParam)))
         Brc = 1-(np.exp(-self.dt/abs(self.RCParam)))
 
-        z_k1 = self.z_k - (eta*self.dt/(3600*self.QParam))*current
-        iR_k1 = Arc@self.iR_k + Brc*current
-        h_k1 = Ah*self.h_k - (1-Ah)*np.sign(current)
+        z_k1 = z_k - (eta*self.dt/(3600*self.QParam))*current
+        iR_k1 = Arc@iR_k + Brc*current
+        h_k1 = Ah*h_k - (1-Ah)*np.sign(current)
         z_k1 = np.clip(z_k1, -0.05, 1.05)
         h_k1 = np.clip(h_k1, -1, 1)
 
-        if abs(current)>self.QParam/100: self.sik = np.sign(current)
-        return (z_k1, iR_k1, h_k1)
+        # if abs(current)>self.QParam/100: self.sik = np.sign(current)
+        self.sik = np.where(abs(current)>self.QParam/100, np.sign(current), prisik)
+        newState = (z_k1, iR_k1, h_k1)
+        return newState
 
-    def outputEqn(self, current, ynoise=0):
-        voltage = self.OCVfromSOC(self.z_k) + self.MParam*self.h_k + self.M0Param*self.sik - self.RParam*self.iR_k - self.R0Param*current + ynoise
+    def outputEqn(self, current, ynoise=0, state=None):
+        if state is not None: 
+            (z_k, iR_k, h_k) = oldState
+            z_k =  z_k.reshape(1,-1)
+            iR_k = iR_k.reshape(1,-1)
+            h_k =  h_k.reshape(1,-1)
+        else:
+            z_k =  self.z_k
+            iR_k = self.iR_k
+            h_k =  self.h_k
+
+        voltage = self.OCVfromSOC(z_k) + self.MParam*h_k + self.M0Param*self.sik - self.RParam*iR_k - self.R0Param*current + ynoise
         return voltage.item()
 
     def updateState(self, newState):
