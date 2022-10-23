@@ -54,7 +54,7 @@ class LithiumIonBattery:
 
     def outputEqn(self, current, ynoise=0, state=None):
         if state is not None: 
-            (z_k, iR_k, h_k) = oldState
+            (z_k, iR_k, h_k) = state
             z_k =  z_k.reshape(1,-1)
             iR_k = iR_k.reshape(1,-1)
             h_k =  h_k.reshape(1,-1)
@@ -64,7 +64,7 @@ class LithiumIonBattery:
             h_k =  self.h_k
 
         voltage = self.OCVfromSOC(z_k) + self.MParam*h_k + self.M0Param*self.sik - self.RParam*iR_k - self.R0Param*current + ynoise
-        return voltage.item()
+        return voltage
 
     def updateState(self, newState):
         (z_k1, iR_k1, h_k1) = newState
