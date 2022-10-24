@@ -6,5 +6,9 @@
 - [x] Extended Kalman Filter
 - [x] Sigma-point Kalman Filter
 - [x] SOC estimation
-- [ ] Battery SOC Percentage
+- [x] Battery SOC Percentage
+- [ ] SPKF diagrams
+- [ ] Bar-delta Method
+
+
 

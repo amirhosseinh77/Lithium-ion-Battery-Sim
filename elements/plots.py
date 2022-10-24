@@ -11,4 +11,5 @@ def plot_SOC(SOC):
     red = 255-green
     y = (-210/100*soc + 260).astype(int)
     for i in range(1,len(soc)): img[y[i]:y[i-1],100:200] = [0,green[i],red[i]] 
+    cv2.putText(img, f'{SOC:02}%', (130, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, 0, 1, cv2.LINE_AA)
     return img
