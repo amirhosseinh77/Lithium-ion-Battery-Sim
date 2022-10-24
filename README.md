@@ -5,4 +5,6 @@
 - [x] Battery Model
 - [x] Extended Kalman Filter
 - [x] Sigma-point Kalman Filter
-- [ ] SOC estimation
+- [x] SOC estimation
+- [ ] Battery SOC percentage
+
