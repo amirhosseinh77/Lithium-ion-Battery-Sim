@@ -82,7 +82,7 @@ class SPKF:
         
         # Q-bump code
         if r**2>4*SigmaY: # bad voltage estimate by 2-SigmaX, bump Q 
-            printf('Bumping sigmax\n')
+            print('Bumping sigmax\n')
             SigmaX[0,0] = SigmaX[0,0]*self.Qbump
         
         # Save data for next iteration...

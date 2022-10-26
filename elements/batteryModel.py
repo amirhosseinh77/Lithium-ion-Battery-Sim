@@ -63,6 +63,7 @@ class LithiumIonBattery:
             iR_k = self.iR_k
             h_k =  self.h_k
 
+        current = current + ynoise
         voltage = self.OCVfromSOC(z_k) + self.MParam*h_k + self.M0Param*self.sik - self.RParam*iR_k - self.R0Param*current + ynoise
         return voltage
 
