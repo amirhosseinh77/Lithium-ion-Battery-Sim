@@ -8,9 +8,9 @@ class SPKF:
         self.model = copy(target_model)
         ir0   = 0                        
         hk0   = 0                        
-        SOC0  = 0 # self.model.OCVfromSOC(self.model.outputEqn(ir0))
+        SOC0  = 1 # self.model.OCVfromSOC(self.model.outputEqn(ir0))
         
-        self.xhat  = np.vstack([SOC0,ir0,hk0]) # initial state
+        self.xhat  = np.vstack([ir0,hk0,SOC0]) # initial state
 
         # Covariance values
         self.SigmaX = SigmaX0
@@ -37,7 +37,7 @@ class SPKF:
         
     def iter(self, ik, vk):
         # Step 1a-1: Create augmented xhat and SigmaX
-        eigval, _ = np.linalg.eig(self.SigmaX)
+        # eigval, _ = np.linalg.eig(self.SigmaX)
         # print(eigval)
         sigmaXa = block_diag(self.SigmaX, self.SigmaW, self.SigmaV)
         sigmaXa = np.real(cholesky(sigmaXa, lower=True))
@@ -54,7 +54,7 @@ class SPKF:
         # Step 1b: Error covariance time update
         #          - Compute weighted covariance sigmaminus(k)
         #            (strange indexing of xhat to avoid "repmat" call)
-        SigmaX = (Xx - xhat)@np.diag(self.Wm.ravel())@(Xx - xhat).T
+        SigmaX = (Xx - xhat)@np.diag(self.Wc.ravel())@(Xx - xhat).T
 
         # Step 1c: Output estimate
         #          - Compute weighted output estimate yhat(k)
@@ -71,8 +71,8 @@ class SPKF:
         if r**2 > 100*SigmaY: L=0
         # print(L, r, yhat, vk)
         xhat = xhat + L*r 
-        xhat[0] = np.clip(xhat[0], -0.05, 1.05)
-        xhat[-1] = np.clip(xhat[-1], -1, 1)
+        xhat[1] = np.clip(xhat[1], -1, 1)
+        xhat[-1] = np.clip(xhat[-1], -0.05, 1.05)
 
         # Step 2c: Error covariance measurement update
         SigmaX = SigmaX - L*SigmaY*L.T
@@ -83,13 +83,13 @@ class SPKF:
         # Q-bump code
         if r**2>4*SigmaY: # bad voltage estimate by 2-SigmaX, bump Q 
             print('Bumping sigmax\n')
-            SigmaX[0,0] = SigmaX[0,0]*self.Qbump
+            SigmaX[-1,-1] = SigmaX[-1,-1]*self.Qbump
         
         # Save data for next iteration...
         self.priorI = ik
         self.SigmaX = SigmaX
         self.xhat = xhat
         
-        zk = self.xhat[0]
-        zkbnd = 3*np.sqrt(SigmaX[0,0])
+        zk = self.xhat[-1]
+        zkbnd = 3*np.sqrt(SigmaX[-1,-1])
         return zk,zkbnd
