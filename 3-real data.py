@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from mat4py import loadmat
 from scipy.linalg import block_diag
 
-data = loadmat('./PANdata_P25.mat')
+data = loadmat('models/PANdata_P25.mat')
 time    = np.array(data['DYNData']['script1']['time'])  
 deltat = time[1]-time[0]
 time    = time-time[0] # start time at 0
