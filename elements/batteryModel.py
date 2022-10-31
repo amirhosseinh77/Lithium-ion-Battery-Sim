@@ -36,21 +36,20 @@ class LithiumIonBattery:
 
 
         if abs(current)>self.QParam/100: self.sik = np.sign(current)
+        if current<0: current = current*self.etaParam
         current = current + xnoise
-        eta = np.where(current<0, self.etaParam, 1) #self.etaParam if current<0 else 1
-        Ah = np.exp(-abs(eta*current*self.GParam*self.dt/(3600*self.QParam)))  # hysteresis factor
+        
+        Ah = np.exp(-abs(current*self.GParam*self.dt/(3600*self.QParam)))  # hysteresis factor
         Arc = np.diag(np.exp(-self.dt/abs(self.RCParam)))
         Brc = 1-(np.exp(-self.dt/abs(self.RCParam)))
 
         iR_k1 = Arc@iR_k + Brc*current
         h_k1 = Ah*h_k - (1-Ah)*np.sign(current)
-        z_k1 = z_k - (eta*self.dt/(3600*self.QParam))*current
+        z_k1 = z_k - (self.dt/(3600*self.QParam))*current
 
         h_k1 = np.clip(h_k1, -1, 1)
         z_k1 = np.clip(z_k1, -0.05, 1.05)
 
-        # if abs(current)>self.QParam/100: self.sik = np.sign(current)
-        # self.sik = np.where(abs(current)>self.QParam/100, np.sign(current), prisik)
         newState = (iR_k1, h_k1, z_k1)
         return newState
 

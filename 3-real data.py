@@ -20,7 +20,7 @@ plt.subplot(2,1,1)
 plt.plot(time,current)
 plt.grid()
 plt.subplot(2,1,2)
-plt.plot(time,voltage)
+plt.plot(time/60,voltage)
 plt.grid()
 plt.show()
 ############################## Simulate Model ##############################
@@ -37,6 +37,8 @@ Zbounds = []
 V = []
 
 for i in range(len(current)):
+# for i in range(1100):
+    # if current[i]<0: current[i]=current[i]*LIB1_SPKF.model.etaParameta
     zhat, zbound = LIB1_SPKF.iter(current[i], voltage[i])
 
     # cv2.imshow('My Battery', np.hstack([plot_SOC(int(soc[i]*100)), plot_SOC(int(zhat*100))]))
@@ -57,24 +59,24 @@ maxIter = len(Zhats)
 # plot diagrams
 plt.figure(figsize=(18,6))
 plt.subplot(1,2,1)
-plt.plot(np.arange(maxIter),100*Ztrues[:maxIter],color=(0,0.8,0))
-plt.plot(np.arange(maxIter),100*Zhats,color=(0,0,1),linestyle='dashed')
-plt.fill_between(np.arange(maxIter), 100*(Zhats+Zbounds), 100*(Zhats-Zbounds), alpha=0.3)
+plt.plot(np.arange(maxIter)/60,100*Ztrues[:maxIter],color=(0,0.8,0))
+plt.plot(np.arange(maxIter)/60,100*Zhats,color=(0,0,1),linestyle='dashed')
+plt.fill_between(np.arange(maxIter)/60, 100*(Zhats+Zbounds), 100*(Zhats-Zbounds), alpha=0.3)
 plt.grid()
-plt.legend(['true','estimate','bounds'])
-plt.title('Sigma-point Kalman filter in action')
-plt.xlabel('Iteration')
+plt.legend(['Truth','Estimate','Bounds'])
+plt.title('SOC estimation using SPKF')
+plt.xlabel('Time (min)')
 plt.ylabel('SOC (%)')
 
 plt.subplot(1,2,2)
 estErr = Ztrues[:maxIter]-Zhats 
-plt.plot(np.arange(maxIter), 100*estErr)
-plt.fill_between(np.arange(maxIter), 100*Zbounds, -100*Zbounds, alpha=0.3)
+plt.plot(np.arange(maxIter)/60, 100*estErr)
+plt.fill_between(np.arange(maxIter)/60, 100*Zbounds, -100*Zbounds, alpha=0.3)
 plt.grid()
-plt.legend(['Error','bounds'])
-plt.title('SPKF Error with bounds')
-plt.xlabel('Iteration') 
-plt.ylabel('Estimation Error (%)')
+plt.legend(['Estimation error','Bounds'])
+plt.title('SOC estimation errors using SPKF')
+plt.xlabel('Time (min)') 
+plt.ylabel('SOC error (%)')
 plt.show()
     
 

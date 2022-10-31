@@ -53,19 +53,18 @@ class SPKF:
 
         # Step 1b: Error covariance time update
         #          - Compute weighted covariance sigmaminus(k)
-        #            (strange indexing of xhat to avoid "repmat" call)
         SigmaX = (Xx - xhat)@np.diag(self.Wc.ravel())@(Xx - xhat).T
 
         # Step 1c: Output estimate
         #          - Compute weighted output estimate yhat(k)
         Y = self.model.outputEqn(ik, Xa[self.Nx+self.Nw:,:], Xx)
-        yhat = Y@self.Wc
-
+        yhat = Y@self.Wm
+        
         # Step 2a: Estimator gain matrix
         SigmaXY = (Xx - xhat)@np.diag(self.Wc.ravel())@(Y - yhat).T
         SigmaY  = (Y - yhat)@np.diag(self.Wc.ravel())@(Y - yhat).T
         L = SigmaXY/SigmaY
-
+        
         # Step 2b: State estimate measurement update
         r = vk - yhat  # residual.  Use to check for sensor errors...
         if r**2 > 100*SigmaY: L=0
@@ -76,9 +75,9 @@ class SPKF:
 
         # Step 2c: Error covariance measurement update
         SigmaX = SigmaX - L*SigmaY*L.T
-        _,S,V = np.linalg.svd(SigmaX)
-        HH = V@np.diag(S)@V.T
-        SigmaX = (SigmaX + SigmaX.T + HH + HH.T)/4 # Help maintain robustness
+        # _,S,V = np.linalg.svd(SigmaX)
+        # HH = V@np.diag(S)@V.T
+        # SigmaX = (SigmaX + SigmaX.T + HH + HH.T)/4 # Help maintain robustness
         
         # Q-bump code
         if r**2>4*SigmaY: # bad voltage estimate by 2-SigmaX, bump Q 
