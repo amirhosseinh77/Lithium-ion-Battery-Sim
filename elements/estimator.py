@@ -68,16 +68,15 @@ class SPKF:
         # Step 2b: State estimate measurement update
         r = vk - yhat  # residual.  Use to check for sensor errors...
         if r**2 > 100*SigmaY: L=0
-        # print(L, r, yhat, vk)
         xhat = xhat + L*r 
         xhat[1] = np.clip(xhat[1], -1, 1)
         xhat[-1] = np.clip(xhat[-1], -0.05, 1.05)
 
         # Step 2c: Error covariance measurement update
         SigmaX = SigmaX - L*SigmaY*L.T
-        # _,S,V = np.linalg.svd(SigmaX)
-        # HH = V@np.diag(S)@V.T
-        # SigmaX = (SigmaX + SigmaX.T + HH + HH.T)/4 # Help maintain robustness
+        _,S,V = np.linalg.svd(SigmaX)
+        HH = V.T@np.diag(S)@V
+        SigmaX = (SigmaX + SigmaX.T + HH + HH.T)/4 # Help maintain robustness
         
         # Q-bump code
         if r**2>4*SigmaY: # bad voltage estimate by 2-SigmaX, bump Q 

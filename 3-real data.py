@@ -15,14 +15,6 @@ current = np.array(data['DYNData']['script1']['current']) # discharge > 0; charg
 voltage = np.array(data['DYNData']['script1']['voltage'])
 soc     = np.array(data['DYNData']['script1']['soc'])
 
-plt.figure(figsize=(12,4))
-plt.subplot(2,1,1)
-plt.plot(time,current)
-plt.grid()
-plt.subplot(2,1,2)
-plt.plot(time/60,voltage)
-plt.grid()
-plt.show()
 ############################## Simulate Model ##############################
 LIB1 = LithiumIonBattery('models/PANmodel.mat', T=25, dt=deltat)
         
@@ -34,13 +26,9 @@ LIB1_SPKF = SPKF(LIB1, SigmaX, SigmaV, SigmaW)
 Ztrues = [soc[0]]
 Zhats = []
 Zbounds = []
-V = []
 
 for i in range(len(current)):
-# for i in range(1100):
-    # if current[i]<0: current[i]=current[i]*LIB1_SPKF.model.etaParameta
     zhat, zbound = LIB1_SPKF.iter(current[i], voltage[i])
-
     # cv2.imshow('My Battery', np.hstack([plot_SOC(int(soc[i]*100)), plot_SOC(int(zhat*100))]))
     # cv2.waitKey(1)
 
@@ -48,30 +36,46 @@ for i in range(len(current)):
     Ztrues.append(soc[i].item())
     Zhats.append(zhat.item())
     Zbounds.append(zbound.item())
-    # V.append(v)
-
 
 Ztrues = np.array(Ztrues)
 Zhats = np.array(Zhats)
 Zbounds = np.array(Zbounds)
-maxIter = len(Zhats)
+# maxIter = len(Zhats)
+
+# compute errors
+print(f'RMS SOC estimation error = {np.sqrt(np.mean((100*(Ztrues[:-1]-Zhats))**2))}')
+print(f'Percent of time error outside bounds = {(np.sum(abs(Ztrues[:-1]-Zhats)>Zbounds)/len(Ztrues[:-1]))*100}')
 
 # plot diagrams
-plt.figure(figsize=(18,6))
-plt.subplot(1,2,1)
-plt.plot(np.arange(maxIter)/60,100*Ztrues[:maxIter],color=(0,0.8,0))
-plt.plot(np.arange(maxIter)/60,100*Zhats,color=(0,0,1),linestyle='dashed')
-plt.fill_between(np.arange(maxIter)/60, 100*(Zhats+Zbounds), 100*(Zhats-Zbounds), alpha=0.3)
+plt.figure()
+plt.subplot(2,2,1)
+plt.plot(time,current)
+plt.grid()
+plt.title('Current')
+# plt.xlabel('Time (min)')
+plt.ylabel('Current (A)')
+
+plt.subplot(2,2,2)
+plt.plot(time/60,voltage)
+plt.grid()
+plt.title('Voltage')
+# plt.xlabel('Time (min)')
+plt.ylabel('Votltage (V)')
+
+plt.subplot(2,2,3)
+plt.plot(time/60,100*Ztrues[:-1],color=(0,0.8,0))
+plt.plot(time/60,100*Zhats,color=(0,0,1),linestyle='dashed')
+plt.fill_between(time/60, 100*(Zhats+Zbounds), 100*(Zhats-Zbounds), alpha=0.3)
 plt.grid()
 plt.legend(['Truth','Estimate','Bounds'])
 plt.title('SOC estimation using SPKF')
 plt.xlabel('Time (min)')
 plt.ylabel('SOC (%)')
 
-plt.subplot(1,2,2)
-estErr = Ztrues[:maxIter]-Zhats 
-plt.plot(np.arange(maxIter)/60, 100*estErr)
-plt.fill_between(np.arange(maxIter)/60, 100*Zbounds, -100*Zbounds, alpha=0.3)
+plt.subplot(2,2,4)
+estErr = Ztrues[:-1]-Zhats 
+plt.plot(time/60, 100*estErr)
+plt.fill_between(time/60, 100*Zbounds, -100*Zbounds, alpha=0.3)
 plt.grid()
 plt.legend(['Estimation error','Bounds'])
 plt.title('SOC estimation errors using SPKF')
