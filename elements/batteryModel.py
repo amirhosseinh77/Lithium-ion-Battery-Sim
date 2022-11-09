@@ -16,6 +16,7 @@ class LithiumIonBattery:
         self.RCParam = np.array(data['model']['RCParam'][self.temps.index(T)])
         self.RParam = np.array(data['model']['RParam'][self.temps.index(T)])
         self.OCVfromSOC = make_OCVfromSOCtemp(data, T)
+        self.SOCfromOCV = make_SOCfromOCVtemp(data, T)
 
         self.sik = 0
         self.dt = dt
@@ -93,3 +94,11 @@ def make_dOCVfromSOCtemp(data, T):
     dOCV = (np.append(dUdZ[0],dUdZ) + np.append(dUdZ,dUdZ[-1]))/2
     dOCVfromSOC = interpolate.interp1d(SOC, dOCV, fill_value="extrapolate")
     return dOCVfromSOC
+
+def make_SOCfromOCVtemp(data, T):
+    OCV = np.array(data['model']['OCV'])
+    SOC0 = np.array(data['model']['SOC0'])
+    SOCrel = np.array(data['model']['SOCrel'])
+    SOC = SOC0 + T*SOCrel
+    SOCfromOCV = interpolate.interp1d(OCV, SOC, fill_value="extrapolate")
+    return SOCfromOCV
