@@ -23,7 +23,6 @@ plt.plot(xnew,dfnew)
 plt.grid()
 plt.show()
 
-
 ############################## Simulate Model ##############################
 LIB1 = LithiumIonBattery('models/PANmodel.mat', T=25, dt=1)
 

@@ -8,7 +8,7 @@ class SPKF:
         self.model = copy(target_model)
         ir0   = 0                        
         hk0   = 0                        
-        SOC0  = 1 # self.model.OCVfromSOC(self.model.outputEqn(ir0))
+        SOC0  = self.model.SOCfromOCV(self.model.outputEqn(ir0))
         
         self.xhat  = np.vstack([ir0,hk0,SOC0]) # initial state
 
