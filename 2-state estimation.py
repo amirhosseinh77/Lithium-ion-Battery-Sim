@@ -41,8 +41,10 @@ V = []
 i = 100
 
 while LIB1.z_k>0:
-    newState = LIB1.stateEqn(i)
-    voltage = LIB1.outputEqn(i)
+    noise = 2*np.random.rand()
+
+    newState = LIB1.stateEqn(i+noise)
+    voltage = LIB1.outputEqn(i+noise)
     LIB1.updateState(newState)
 
     zhat, zbound = LIB1_SPKF.iter(i, voltage)
