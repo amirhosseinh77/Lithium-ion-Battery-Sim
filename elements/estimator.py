@@ -37,8 +37,6 @@ class SPKF:
         
     def iter(self, ik, vk):
         # Step 1a-1: Create augmented xhat and SigmaX
-        # eigval, _ = np.linalg.eig(self.SigmaX)
-        # print(eigval)
         sigmaXa = block_diag(self.SigmaX, self.SigmaW, self.SigmaV)
         sigmaXa = np.real(cholesky(sigmaXa, lower=True))
         xhata = np.vstack([self.xhat, np.zeros((self.Nw+self.Nv,1))])
