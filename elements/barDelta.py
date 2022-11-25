@@ -16,14 +16,13 @@ class BarDelta_SPKF:
         # initial state
         self.xhat  = np.vstack([ir0,hk0,SOC0,0,0,0]) 
 
-        # # variable indexes
-        # self.iR
-        # iR_k = iR_k.reshape(1,-1)
-        # h_k =  h_k.reshape(1,-1)
-        # z_k =  z_k.reshape(1,-1)
-        # ib_k =  ib_k.reshape(1,-1)
-        # R0_k =  R0_k.reshape(1,-1)
-        # Qinv_k =  Qinv_k.reshape(1,-1)
+        # variable indexes
+        self.iRInd = 0
+        self.hInd =  1
+        self.zInd =  2
+        self.ibInd = 3
+        self.R0Ind = 4
+        self.QinvInd = 5
 
         # Covariance values
         self.SigmaX = SigmaX0
@@ -52,8 +51,8 @@ class BarDelta_SPKF:
         self.dNa = self.dNx+self.dNw+self.dNv    # augmented length for delta filters
 
         dWmx = np.zeros(2*dNa+1)
-        dWmx[0] = (h**2-dNa)/(h**2)                 # weighting factors when computing mean
-        dWmx[1:] = 1/(2*h**2)                       # and covariance
+        dWmx[0] = (h**2-dNa)/(h**2)              # weighting factors when computing mean
+        dWmx[1:] = 1/(2*h**2)                    # and covariance
         dWcx=dWmx                       
         self.dWm = dWmx.reshape(-1,1)               # mean
         self.dWc = dWcx.reshape(-1,1)               # covar
@@ -62,7 +61,81 @@ class BarDelta_SPKF:
         self.priorI = 0
         self.Qbump = 5
 
-    def iter(self, ik, vk):
+        # reserving storage
+        self.celldz = np.zeros(self.NUM_CELL)
+        self.cellSdz = SigmaX0[self.zInd, self.zInd]*np.ones(self.NUM_CELL)
+
+        self.celldR0 = np.zeros(self.NUM_CELL)
+        self.cellSdR0 = SigmaX0[self.R0Ind, self.R0Ind]*np.ones(self.NUM_CELL)
+
+        self.celldQinv = np.zeros(self.NUM_CELL)
+        self.cellSdQinv = SigmaX0[self.QinvInd, self.QinvInd]*np.ones(self.NUM_CELL)
+
+    def iter_bar(self, ik, vk):
+        # Step 1a : State estimate time update
+        #       - Create xhatminus augmented SigmaX points
+        #       - Extract xhatminus state SigmaX points
+        #       - Compute weighted average xhatminus(k)
+
+        # Step 1a-1: Create augmented SigmaX and xhat
+        sigmaXa = block_diag(self.SigmaX, self.SigmaW, self.SigmaV)
+        sigmaXa = np.real(cholesky(sigmaXa, lower=True))
+        xhata = np.vstack([self.xhat, np.zeros((self.Nw+self.Nv,1))])
+
+        # Step 1a-2: Calculate SigmaX points (strange indexing of xhat a to
+        Xa = xhata.reshape(self.Na,1) + self.h*np.hstack([np.zeros((self.Na, 1)), sigmaXa, -sigmaXa])
+
+        # Step 1a-3: Time update from last iteration until now
+        Xx = self.stateEqn(self.priorI, Xa[self.Nx:self.Nx+self.Nw,:], Xa[:self.Nx,:])
+        Xx = np.vstack(Xx)
+        xhat = Xx@self.Wm
+
+        # Step 1b: Error covariance time update
+        #           - Compute weighted covariance sigmaminus(k)
+        #           (strange indexing of xhat to avoid "repmat" call)
+        SigmaX = (Xx - xhat)@np.diag(self.Wc.ravel())@(Xx - xhat).T
+
+        # Step 1c: Output estimate
+        #           - Compute weighted output estimate yhat(k)
+        Y = self.outputEqn(ik, Xa[self.Nx+self.Nw:,:], Xx)
+        yhat = Y@self.Wm
+
+        # Step 2a: Estimator gain matrix
+        SigmaXY = (Xx - xhat)@np.diag(self.Wc.ravel())@(Y - yhat).T
+        SigmaY  = (Y - yhat)@np.diag(self.Wc.ravel())@(Y - yhat).T
+        L = SigmaXY/SigmaY
+
+        # Step 2b: State estimate measurement update
+        r = np.mean(vk) - yhat  # residual.  Use to check for sensor errors...
+        if r**2 > 100*SigmaY: L=0
+        xhat = xhat + L*r 
+        xhat[self.hInd] = np.clip(xhat[self.hInd], -1, 1)
+        xhat[self.zInd] = np.clip(xhat[self.zInd], -0.05, 1.05)
+
+        # Step 2c: Error covariance measurement update
+        SigmaX = SigmaX - L*SigmaY*L.T
+        _,S,V = np.linalg.svd(SigmaX)
+        HH = V.T@np.diag(S)@V
+        SigmaX = (SigmaX + SigmaX.T + HH + HH.T)/4 # Help maintain robustness
+
+        # Q-bump code
+        if r**2>4*SigmaY: # bad voltage estimate by 2-SigmaX, bump Q 
+            print('Bumping sigmax\n')
+            SigmaX[self.zInd, self.zInd] = SigmaX[self.zInd, self.zInd]*self.Qbump
+
+        # Save data in spkfData structure for next time...
+        self.priorI = ik
+        self.SigmaX = SigmaX
+        self.xhat = xhat
+
+        ib = xhat[self.ibInd]
+        ibbnd = 3*np.sqrt(SigmaX[self.ibInd, self.ibInd])
+
+        zk = xhat[self.zInd]
+        zkbnd = 3*np.sqrt(SigmaX[self.zInd, self.zInd])
+        # return zk,zkbnd
+
+    def iter_delta(self, ik, vk):
         pass
 
 
