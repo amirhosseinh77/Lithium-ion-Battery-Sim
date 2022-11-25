@@ -44,7 +44,7 @@ for k,i in enumerate(ik):
         voltages[k,c] = voltage
         SOCs[k,c] = cell.z_k.ravel()
 
-
+'''
 plt.figure(figsize=(16,5))
 plt.subplot(1,2,1)
 plt.plot(t, voltages)
@@ -62,7 +62,7 @@ plt.xlabel('Time (hr)')
 plt.ylabel('State of charge (%)')
 plt.title('SOC versus time for 4 cells')
 plt.show()
-
+'''
 ##############################################################################
 
 vk = voltages
@@ -97,3 +97,7 @@ SigmaW = block_diag(1e-1, 1e-4, 1e-4, 1e-4)             # uncertainty of current
 SigmaV = block_diag(1e-3)                               # uncertainty of voltage sensor, output equation
 
 SCM1_SPKF = BarDelta_SPKF(batteryPack, SigmaX, SigmaW, SigmaV)
+SCM1_SPKF.iter_bar(current[0], voltage[0])
+SCM1_SPKF.iter_delta(current[0], voltage[0])
+
+print('every thing gooooooood!!!')
