@@ -136,7 +136,7 @@ class BarDelta_SPKF:
 
         zk = xhat[self.zInd]
         zkbnd = 3*np.sqrt(SigmaX[self.zInd, self.zInd])
-        # return zk,zkbnd
+        return zk,zkbnd,xhat[self.ibInd]
 
     def iter_delta(self, ik, vk):
         # Updating the delta-SOC, delta-R0 & delta-Qinv SPKFs

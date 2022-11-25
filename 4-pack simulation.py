@@ -96,8 +96,75 @@ SigmaX = block_diag(1e2, 1e-4, 1e-2, 5e-2, 5e-2, 5e-2)  # uncertainty of initial
 SigmaW = block_diag(1e-1, 1e-4, 1e-4, 1e-4)             # uncertainty of current sensor, bias, R0, Qinv
 SigmaV = block_diag(1e-3)                               # uncertainty of voltage sensor, output equation
 
-SCM1_SPKF = BarDelta_SPKF(batteryPack, SigmaX, SigmaW, SigmaV)
-SCM1_SPKF.iter_bar(current[0], voltage[0])
-SCM1_SPKF.iter_delta(current[0], voltage[0])
 
-print('every thing gooooooood!!!')
+Ztrues = [soc[0]]
+Zhats = []
+Zbounds = []
+ibhats = []
+
+
+for i in range(len(current)):
+    SCM1_SPKF = BarDelta_SPKF(batteryPack, SigmaX, SigmaW, SigmaV)
+    zhat, zbound, ibhat = SCM1_SPKF.iter_bar(current[i], voltage[i])
+    SCM1_SPKF.iter_delta(current[i], voltage[i])
+
+    # store data
+    Ztrues.append(soc[i])
+    Zhats.append(zhat)
+    Zbounds.append(zbound)
+    ibhats.append(ibhat)
+
+# print('every thing gooooooood!!!')
+
+Ztrues = np.array(Ztrues)
+Zhats = np.array(Zhats)
+Zbounds = np.array(Zbounds)
+ibhats = np.array(ibhats)
+
+print('very nice!')
+
+plt.figure()
+plt.subplot(1,2,1)
+plt.plot(np.arange(len(Zhats)),Zhats)
+plt.subplot(1,2,2)
+plt.plot(np.arange(len(ibhats)),ibhats)
+
+plt.show()
+
+# # plot diagrams
+# plt.figure()
+# plt.subplot(2,2,1)
+# plt.plot(time,current)
+# plt.grid()
+# plt.title('Current')
+# # plt.xlabel('Time (min)')
+# plt.ylabel('Current (A)')
+
+# plt.subplot(2,2,2)
+# plt.plot(time/60,voltage)
+# plt.grid()
+# plt.title('Voltage')
+# # plt.xlabel('Time (min)')
+# plt.ylabel('Votltage (V)')
+
+# plt.subplot(2,2,3)
+# plt.plot(time/60,100*Ztrues[:-1],color=(0,0.8,0))
+# plt.plot(time/60,100*Zhats,color=(0,0,1),linestyle='dashed')
+# plt.fill_between(time/60, 100*(Zhats+Zbounds), 100*(Zhats-Zbounds), alpha=0.3)
+# plt.grid()
+# plt.legend(['Truth','Estimate','Bounds'])
+# plt.title('SOC estimation using SPKF')
+# plt.xlabel('Time (min)')
+# plt.ylabel('SOC (%)')
+
+# plt.subplot(2,2,4)
+# estErr = Ztrues[:-1]-Zhats 
+# plt.plot(time/60, 100*estErr)
+# plt.fill_between(time/60, 100*Zbounds, -100*Zbounds, alpha=0.3)
+# plt.grid()
+# plt.legend(['Estimation error','Bounds'])
+# plt.title('SOC estimation errors using SPKF')
+# plt.xlabel('Time (min)') 
+# plt.ylabel('SOC error (%)')
+# plt.show()
+    
