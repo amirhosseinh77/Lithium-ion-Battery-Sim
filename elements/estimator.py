@@ -3,7 +3,7 @@ from scipy.linalg import block_diag, cholesky
 from copy import copy
 
 class SPKF:
-    def __init__(self, target_model, SigmaX0, SigmaV, SigmaW):
+    def __init__(self, target_model, SigmaX0, SigmaW, SigmaV):
         # store model
         self.model = copy(target_model)
         ir0   = 0                        

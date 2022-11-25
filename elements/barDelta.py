@@ -3,10 +3,11 @@ from scipy.linalg import block_diag, cholesky
 from copy import copy
 
 class BarDelta_SPKF:
-    def __init__(self, BatteryPack, SigmaX0, SigmaV, SigmaW):
+    def __init__(self, BatteryPack, SigmaX0, SigmaW, SigmaV):
         # battery pack information
         self.SCMpack = copy(BatteryPack)
-        self.NUM_CELL = len(self.pack)
+        self.NUM_CELL = len(self.SCMpack)
+        self.dt = self.SCMpack[0].dt
 
         # store model
         ir0   = 0                        
@@ -45,17 +46,17 @@ class BarDelta_SPKF:
         self.Wc = Wcx.reshape(-1,1) # covar
 
         # CDKF delta weights
-        self.dNx = 1                             # one state per delta filter, for estimating SOC
-        self.dNw = 1                             # one process-noise per delta filter
+        self.dNx = 1                                    # one state per delta filter, for estimating SOC
+        self.dNw = 1                                    # one process-noise per delta filter
         self.dNv = 1
-        self.dNa = self.dNx+self.dNw+self.dNv    # augmented length for delta filters
+        self.dNa = self.dNx+self.dNw+self.dNv           # augmented length for delta filters
 
-        dWmx = np.zeros(2*dNa+1)
-        dWmx[0] = (h**2-dNa)/(h**2)              # weighting factors when computing mean
-        dWmx[1:] = 1/(2*h**2)                    # and covariance
+        dWmx = np.zeros(2*self.dNa+1)
+        dWmx[0] = (self.h**2-self.dNa)/(self.h**2)      # weighting factors when computing mean
+        dWmx[1:] = 1/(2*self.h**2)                      # and covariance
         dWcx=dWmx                       
-        self.dWm = dWmx.reshape(-1,1)               # mean
-        self.dWc = dWcx.reshape(-1,1)               # covar
+        self.dWm = dWmx.reshape(-1,1)                   # mean
+        self.dWc = dWcx.reshape(-1,1)                   # covar
 
         # previous value of current
         self.priorI = 0
@@ -124,7 +125,6 @@ class BarDelta_SPKF:
             SigmaX[self.zInd, self.zInd] = SigmaX[self.zInd, self.zInd]*self.Qbump
 
         # Save data in spkfData structure for next time...
-        self.priorI = ik
         self.SigmaX = SigmaX
         self.xhat = xhat
 
@@ -137,6 +137,7 @@ class BarDelta_SPKF:
 
     def iter_delta(self, ik, vk):
         # Updating the delta-SOC, delta-R0 & delta-Qinv SPKFs
+        ik = ik - ib
         # delta-SOC
         for thecell in range(self.NUM_CELL):
             # Step 1a - State prediction time update
@@ -146,7 +147,7 @@ class BarDelta_SPKF:
 
             Xa = xhata.reshape(self.dNa,1) + h*np.hstack([np.zeros((self.dNa, 1)), sigmaXa, -sigmaXa])
             # priorI is updated sooner!!!
-            Xx = self.deltazStateEqn(priorI, xnoise=Xa[self.dNx:self.dNx+self.dNw,:], deltaz_k=Xa[:self.dNx,:], celldQinv=0)  ###??? cellXa[Nx:Nx+Nw,:], Xa[:Nx,:]
+            Xx = self.deltazStateEqn(thecell, self.priorI, Xa[self.dNx:self.dNx+self.dNw,:], Xa[:self.dNx,:])
             Xx = np.vstack(Xx)
             xhat  = Xx@self.dWm
 
@@ -154,7 +155,7 @@ class BarDelta_SPKF:
             SigmaX = (Xx - xhat)@np.diag(dWc.ravel())@(Xx - xhat).T
 
             # Step 1c - output estimate
-            Y = self.deltazOutputEqn(priorI, zk, Xx, ynoise=Xa[dNx+dNw:,:])
+            Y = self.deltazOutputEqn(self.SCMpack[thecell], ik, Xa[dNx+dNw:,:], Xx)
             yhat = Y@self.dWm
 
             # Step 2a - Estimator gain matrix
@@ -232,6 +233,9 @@ class BarDelta_SPKF:
             # Step 2c - Error covariance measurement update
             cellSdQinv[thecell] = cellSdQinv[thecell] - cellL*cellSy*cellL.T
 
+        self.priorI = ik
+
+
 
     def stateEqn(self, current, xnoise=0, oldState=None):
         dt = 1
@@ -283,18 +287,18 @@ class BarDelta_SPKF:
         return voltage
 
 
-    def deltazStateEqn(self, current, xnoise=0, deltaz_k=0, celldQinv=0):
-        dt = 1
+    def deltazStateEqn(self, thecell, current, xnoise, old_deltaz):
         current = current + xnoise
-        deltaz_k1 = deltaz_k - (current)*dt*celldQinv/3600
-        return deltaz_k1
+        new_deltaz = old_deltaz - (current)*self.dt*self.dQinv[thecell]/3600
+        return new_deltaz
 
-    def deltazOutputEqn(self, current, z_k, deltaz_k1, ynoise=0):
-        h_k = -1.16634495e-02
-        iR_k = 3.37375367e-01
-        deltaR0_k1 = 0
-        ib_k = 0
-        voltage = LIB1.OCVfromSOC(z_k+deltaz_k1) + MParam*h_k + M0Param*LIB1.sik - RParam*iR_k - (R0Param+deltaR0_k1)*(current-ib_k) + ynoise
+    def deltazOutputEqn(self, model, current, ynoise, dz):
+        voltage = model.OCVfromSOC(self.xhat[self.zInd]+dz) \
+                + model.MParam*self.xhat[self.hInd] \
+                - model.RParam*self.xhat[self.iRInd] \
+                - (model.R0Param+self.dR0[thecell])*current \
+                + ynoise
+
         return voltage
 
     def deltaR0StateEqn(self, xnoise=0,deltaR0_k=0):

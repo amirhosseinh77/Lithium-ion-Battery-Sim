@@ -19,9 +19,10 @@ soc     = np.array(data['DYNData']['script1']['soc'])
 LIB1 = LithiumIonBattery('models/PANmodel.mat', T=25, dt=deltat)
         
 SigmaX = block_diag(1e2,1e-2,1e-3)  # uncertainty of initial state
-SigmaV = block_diag(3e-1)  # Uncertainty of voltage sensor, output equation
-SigmaW = block_diag(4e0)   # Uncertainty of current sensor, state equation
-LIB1_SPKF = SPKF(LIB1, SigmaX, SigmaV, SigmaW)
+SigmaW = block_diag(4e0)            # Uncertainty of current sensor, state equation
+SigmaV = block_diag(3e-1)           # Uncertainty of voltage sensor, output equation
+
+LIB1_SPKF = SPKF(LIB1, SigmaX, SigmaW, SigmaV)
 
 Ztrues = [soc[0]]
 Zhats = []
