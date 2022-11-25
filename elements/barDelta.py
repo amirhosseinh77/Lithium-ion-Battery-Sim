@@ -62,14 +62,14 @@ class BarDelta_SPKF:
         self.Qbump = 5
 
         # reserving storage
-        self.celldz = np.zeros(self.NUM_CELL)
-        self.cellSdz = SigmaX0[self.zInd, self.zInd]*np.ones(self.NUM_CELL)
+        self.dz = np.zeros(self.NUM_CELL)
+        self.Sdz = SigmaX0[self.zInd, self.zInd]*np.ones(self.NUM_CELL)
 
-        self.celldR0 = np.zeros(self.NUM_CELL)
-        self.cellSdR0 = SigmaX0[self.R0Ind, self.R0Ind]*np.ones(self.NUM_CELL)
+        self.dR0 = np.zeros(self.NUM_CELL)
+        self.SdR0 = SigmaX0[self.R0Ind, self.R0Ind]*np.ones(self.NUM_CELL)
 
-        self.celldQinv = np.zeros(self.NUM_CELL)
-        self.cellSdQinv = SigmaX0[self.QinvInd, self.QinvInd]*np.ones(self.NUM_CELL)
+        self.dQinv = np.zeros(self.NUM_CELL)
+        self.SdQinv = SigmaX0[self.QinvInd, self.QinvInd]*np.ones(self.NUM_CELL)
 
     def iter_bar(self, ik, vk):
         # Step 1a : State estimate time update
@@ -136,7 +136,101 @@ class BarDelta_SPKF:
         # return zk,zkbnd
 
     def iter_delta(self, ik, vk):
-        pass
+        # Updating the delta-SOC, delta-R0 & delta-Qinv SPKFs
+        # delta-SOC
+        for thecell in range(self.NUM_CELL):
+            # Step 1a - State prediction time update
+            sigmaXa  = block_diag(self.Sdz[thecell], SigmaW[1,1], SigmaV)
+            sigmaXa  = np.real(cholesky(sigmaXa , lower=True))
+            xhata  = np.vstack([self.dz[thecell], np.zeros((dNw+Nv,1))])
+
+            Xa = xhata.reshape(self.dNa,1) + h*np.hstack([np.zeros((self.dNa, 1)), sigmaXa, -sigmaXa])
+            # priorI is updated sooner!!!
+            Xx = self.deltazStateEqn(priorI, xnoise=Xa[self.dNx:self.dNx+self.dNw,:], deltaz_k=Xa[:self.dNx,:], celldQinv=0)  ###??? cellXa[Nx:Nx+Nw,:], Xa[:Nx,:]
+            Xx = np.vstack(Xx)
+            xhat  = Xx@self.dWm
+
+            # Step 1b - Do error covariance time update
+            SigmaX = (Xx - xhat)@np.diag(dWc.ravel())@(Xx - xhat).T
+
+            # Step 1c - output estimate
+            Y = self.deltazOutputEqn(priorI, zk, Xx, ynoise=Xa[dNx+dNw:,:])
+            yhat = Y@self.dWm
+
+            # Step 2a - Estimator gain matrix
+            SigmaXY = (Xx - xhat)@np.diag(dWc.ravel())@(Xx - xhat).T
+            SigmaY = (Y - yhat)@np.diag(dWc.ravel())@(Y - yhat).T
+            L = SigmaXY/SigmaY
+
+            # Step 2b - State estimate measurement update
+            self.dz[thecell] = xhat + L*(vk[thecell] - yhat) 
+
+            # Step 2c - Error covariance measurement update
+            self.Sdz[thecell] = SigmaX - L*SigmaY*L.T
+
+        # delta-R0
+        for thecell in range(self.NUM_CELL):
+            R0 = self.dR0[thecell]
+            SdR0 = self.SdR0[thecell]
+
+            # Step 1a - State prediction time update
+            cellSxa = block_diag(cellSdR0[thecell], SigmaW[2,2], SigmaV)
+            cellSxa = np.real(cholesky(cellSxa, lower=True))
+            cellXa = np.vstack([celldR0[thecell], np.zeros((dNw+Nv,1))])
+            cellXa = cellXa.reshape(dNa,1) + h*np.hstack([np.zeros((dNa, 1)), cellSxa, -cellSxa])
+            cellXx = deltaR0StateEqn(xnoise=cellXa[dNx:dNx+dNw,:], deltaR0_k=cellXa[:dNx,:])  ###??? cellXa[Nx:Nx+Nw,:], Xa[:Nx,:]
+            cellXx = np.vstack(cellXx)
+            celldR0[thecell] = cellXx@dWm
+
+            # Step 1b - Do error covariance time update
+            cellSdR0[thecell] = (cellXx - celldR0[thecell])@np.diag(dWc.ravel())@(cellXx - celldR0[thecell]).T
+
+            # Step 1c - output estimate
+            cellY = deltaR0OutputEqn(priorI, zk, cellSdz[thecell], ynoise=cellXa[dNx+dNw:,:])
+            cellyhat = cellY@dWm
+
+            # Step 2a - Estimator gain matrix
+            cellSxy = (cellXx - celldR0[thecell])@np.diag(dWc.ravel())@(cellXx - celldR0[thecell]).T
+            cellSy  = (cellY - cellyhat)@np.diag(dWc.ravel())@(cellY - cellyhat).T
+            cellL = cellSxy/cellSy
+
+            # Step 2b - State estimate measurement update
+            celldR0[thecell] = celldR0[thecell] + cellL*(vkk[thecell] - cellyhat) 
+
+            # Step 2c - Error covariance measurement update
+            cellSdR0[thecell] = cellSdR0[thecell] - cellL*cellSy*cellL.T
+
+        # delta-Qinv
+        for thecell in range(NUM_CELL):
+            dQinv = self.dQinv[thecell]
+            SdQinv = self.SdQinv[thecell]
+
+            # Step 1a - State prediction time update
+            cellSxa = block_diag(cellSdQinv[thecell], SigmaW[3,3], SigmaV)
+            cellSxa = np.real(cholesky(cellSxa, lower=True))
+            cellXa = np.vstack([celldQinv[thecell], np.zeros((dNw+Nv,1))])
+            cellXa = cellXa.reshape(dNa,1) + h*np.hstack([np.zeros((dNa, 1)), cellSxa, -cellSxa])
+            cellXx = deltaQinvStateEqn(xnoise=cellXa[dNx:dNx+dNw,:], deltaQinv_k=cellXa[:dNx,:])  ###??? cellXa[Nx:Nx+Nw,:], Xa[:Nx,:]
+            cellXx = np.vstack(cellXx)
+            celldQinv[thecell] = cellXx@dWm
+
+            # Step 1b - Do error covariance time update
+            cellSdQinv[thecell] = (cellXx - celldQinv[thecell])@np.diag(dWc.ravel())@(cellXx - celldQinv[thecell]).T
+
+            # Step 1c - output estimate
+            cellY = deltaQinvOutputEqn(priorI, zk, cellXx, ynoise=cellXa[dNx+dNw:,:])
+            cellyhat = cellY@dWm
+
+            # Step 2a - Estimator gain matrix
+            cellSxy = (cellXx - celldQinv[thecell])@np.diag(dWc.ravel())@(cellXx - celldQinv[thecell]).T
+            cellSy  = (cellY - cellyhat)@np.diag(dWc.ravel())@(cellY - cellyhat).T
+            cellL = cellSxy/cellSy
+
+            # Step 2b - State estimate measurement update
+            celldQinv[thecell] = celldQinv[thecell] + cellL*(vkk[thecell] - cellyhat) 
+
+            # Step 2c - Error covariance measurement update
+            cellSdQinv[thecell] = cellSdQinv[thecell] - cellL*cellSy*cellL.T
 
 
     def stateEqn(self, current, xnoise=0, oldState=None):
