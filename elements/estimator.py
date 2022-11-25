@@ -14,13 +14,13 @@ class SPKF:
 
         # Covariance values
         self.SigmaX = SigmaX0
-        self.SigmaV = SigmaV
         self.SigmaW = SigmaW
+        self.SigmaV = SigmaV
 
         # SPKF specific parameters
-        self.Nx = SigmaX0.shape[0]
-        self.Nw = 1
-        self.Nv = 1
+        self.Nx = self.SigmaX.shape[0]
+        self.Nw = self.SigmaW.shape[0]
+        self.Nv = self.SigmaV.shape[0]
         self.Na = self.Nx+self.Nw+self.Nv
 
         Wmx = np.zeros(2*self.Na+1)
