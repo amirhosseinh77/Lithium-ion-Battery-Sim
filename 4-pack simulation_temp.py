@@ -1,15 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from elements.batteryModel import LithiumIonBattery, make_OCVfromSOCtemp, make_dOCVfromSOCtemp
-from elements.barDelta import BarDelta_SPKF
+from elements.barDelta_temp import BarDelta_SPKF
 from scipy.linalg import block_diag, cholesky
 from copy import copy
 
 udds = np.loadtxt("models/udds.txt")
 udds
 
-ik = np.hstack([np.zeros(300), udds[:,1], np.zeros(300), udds[:,1], np.zeros(241)]*4)
-t = np.arange(len(ik))/3600
+ik = np.hstack([np.zeros(300), udds[:,1], np.zeros(300), udds[:,1], np.zeros(241)])
+time = np.arange(len(ik))/3600
 
 # battery cells
 z0 = np.arange(0.9, 0.6, -0.1)       # set initial SOC for each cell in pack
@@ -30,8 +30,8 @@ cell1.QParam, cell2.QParam, cell3.QParam, cell4.QParam = Q0
 batteryPack = [cell1, cell2, cell3, cell4]
 
 # currents = np.zeros((len(t),1))
-voltages = np.zeros((len(t),len(batteryPack)))
-SOCs = np.zeros((len(t),len(batteryPack)))
+voltages = np.zeros((len(time),len(batteryPack)))
+SOCs = np.zeros((len(time),len(batteryPack)))
 
 for k,i in enumerate(ik):
     # currents[k] = i
@@ -44,10 +44,10 @@ for k,i in enumerate(ik):
         voltages[k,c] = voltage
         SOCs[k,c] = cell.z_k.ravel()
 
-
+'''
 plt.figure(figsize=(16,5))
 plt.subplot(1,2,1)
-plt.plot(t, voltages)
+plt.plot(time, voltages)
 plt.grid()
 plt.legend(['cell1','cell2','cell3','cell4'])
 plt.xlabel('Time (hr)')
@@ -55,14 +55,14 @@ plt.ylabel('Voltage (V)')
 plt.title('Voltage versus time for 4 cells')
 
 plt.subplot(1,2,2)
-plt.plot(t, SOCs)
+plt.plot(time, SOCs)
 plt.grid()
 plt.legend(['cell1','cell2','cell3','cell4'])
 plt.xlabel('Time (hr)')
 plt.ylabel('State of charge (%)')
 plt.title('SOC versus time for 4 cells')
 plt.show()
-
+'''
 ##############################################################################
 
 vk = voltages
@@ -71,7 +71,6 @@ T=25
 z0, R0, Q0
 
 ibias = 0.5
-time = np.arange(len(ik))
 deltat = 1
 
 current = ik + ibias
@@ -91,9 +90,9 @@ dR0bound = np.zeros_like(voltage)   # and for bounds on those values
 
 # Covariance values
 # State ordering: ir,h,z,bias,R,Qinv
-SigmaX = block_diag(1e2, 1e-4, 1e-2, 5e-2, 5e-2, 5e-2)  # uncertainty of initial state (ir,h,z,bias,R0,Qinv)
-SigmaW = block_diag(1e-1, 1e-4, 1e-4, 1e-4)             # uncertainty of current sensor, bias, R0, Qinv
-SigmaV = block_diag(1e-3)                               # uncertainty of voltage sensor, output equation
+SigmaX = block_diag(1e2, 1e-4, 1e-2, 5e-2)  # uncertainty of initial state (ir,h,z,bias)
+SigmaW = block_diag(1e-1, 1e-4)             # uncertainty of current sensor, bias
+SigmaV = block_diag(1e-3)                   # uncertainty of voltage sensor, output equation
 
 
 Ztrues = [soc[0]]
@@ -124,9 +123,9 @@ print('very nice!')
 
 plt.figure()
 plt.subplot(1,2,1)
-plt.plot(np.arange(len(Zhats)),Zhats)
+plt.plot(time,Zhats)
 plt.subplot(1,2,2)
-plt.plot(np.arange(len(ibhats)),ibhats)
+plt.plot(time,ibhats)
 
 plt.show()
 
