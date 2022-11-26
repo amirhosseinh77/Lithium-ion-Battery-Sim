@@ -10,7 +10,13 @@ class SPKF:
         hk0   = 0                        
         SOC0  = self.model.SOCfromOCV(self.model.outputEqn(0))
         
-        self.xhat  = np.vstack([ir0,hk0,SOC0]) # initial state
+        # initial state
+        self.xhat  = np.vstack([ir0,hk0,SOC0])
+
+        # variable indexes
+        self.iRInd = 0
+        self.hInd =  1
+        self.zInd =  2
 
         # Covariance values
         self.SigmaX = SigmaX0
@@ -23,6 +29,7 @@ class SPKF:
         self.Nv = self.SigmaV.shape[0]
         self.Na = self.Nx+self.Nw+self.Nv
 
+        # CDKF bar weights
         Wmx = np.zeros(2*self.Na+1)
         self.h = np.sqrt(3)
         Wmx[0] = (self.h**2-self.Na)/(self.h**2)
@@ -30,11 +37,11 @@ class SPKF:
         Wcx=Wmx
         self.Wm = Wmx.reshape(-1,1) # mean
         self.Wc = Wcx.reshape(-1,1) # covar
-        self.Qbump = 5
 
         # previous value of current
         self.priorI = 0
-        
+        self.Qbump = 5
+
     def iter(self, ik, vk):
         # Step 1a-1: Create augmented xhat and SigmaX
         sigmaXa = block_diag(self.SigmaX, self.SigmaW, self.SigmaV)
@@ -67,8 +74,8 @@ class SPKF:
         r = vk - yhat  # residual.  Use to check for sensor errors...
         if r**2 > 100*SigmaY: L=0
         xhat = xhat + L*r 
-        xhat[1] = np.clip(xhat[1], -1, 1)
-        xhat[-1] = np.clip(xhat[-1], -0.05, 1.05)
+        xhat[self.hInd] = np.clip(xhat[self.hInd], -1, 1)
+        xhat[self.zInd] = np.clip(xhat[self.zInd], -0.05, 1.05)
 
         # Step 2c: Error covariance measurement update
         SigmaX = SigmaX - L*SigmaY*L.T
@@ -79,13 +86,13 @@ class SPKF:
         # Q-bump code
         if r**2>4*SigmaY: # bad voltage estimate by 2-SigmaX, bump Q 
             print('Bumping sigmax\n')
-            SigmaX[-1,-1] = SigmaX[-1,-1]*self.Qbump
+            SigmaX[self.zInd, self.zInd] = SigmaX[self.zInd, self.zInd]*self.Qbump
         
         # Save data for next iteration...
         self.priorI = ik
         self.SigmaX = SigmaX
         self.xhat = xhat
         
-        zk = self.xhat[-1]
-        zkbnd = 3*np.sqrt(SigmaX[-1,-1])
-        return zk,zkbnd
+        zk = self.xhat[self.zInd]
+        zkbnd = 3*np.sqrt(SigmaX[self.zInd, self.zInd])
+        return zk, zkbnd
