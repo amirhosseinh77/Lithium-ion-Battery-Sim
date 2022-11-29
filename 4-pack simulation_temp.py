@@ -35,7 +35,6 @@ SOCs = np.zeros((len(time),len(batteryPack)))
 
 for k,i in enumerate(ik):
     # currents[k] = i
-    
     for c,cell in enumerate(batteryPack):
         newState = cell.stateEqn(i)
         voltage = cell.outputEqn(i)
@@ -99,18 +98,21 @@ Ztrues = [soc[0]]
 Zhats = []
 Zbounds = []
 ibhats = []
+SCM1_SPKF = BarDelta_SPKF(batteryPack, SigmaX, SigmaW, SigmaV)
 
 
 for i in range(len(current)):
-    SCM1_SPKF = BarDelta_SPKF(batteryPack, SigmaX, SigmaW, SigmaV)
+    
     zhat, zbound, ibhat = SCM1_SPKF.iter_bar(current[i], voltage[i])
-    SCM1_SPKF.iter_delta(current[i], voltage[i])
+    # SCM1_SPKF.iter_delta(current[i], voltage[i])
 
     # store data
     Ztrues.append(soc[i])
     Zhats.append(zhat)
     Zbounds.append(zbound)
     ibhats.append(ibhat)
+    # break
+
 
 # print('every thing gooooooood!!!')
 
@@ -122,9 +124,9 @@ ibhats = np.array(ibhats)
 print('very nice!')
 
 plt.figure()
-plt.subplot(1,2,1)
+plt.subplot(2,1,1)
 plt.plot(time,Zhats)
-plt.subplot(1,2,2)
+plt.subplot(2,1,2)
 plt.plot(time,ibhats)
 
 plt.show()
