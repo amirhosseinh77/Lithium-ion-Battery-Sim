@@ -35,7 +35,7 @@ SigmaV = block_diag(3e-1)           # Uncertainty of voltage sensor, output equa
 
 LIB1_SPKF = SPKF(LIB1, SigmaX, SigmaW, SigmaV)
 
-Ztrues = [LIB1.z_k.item()]
+Ztrues = []
 Zhats = []
 Zbounds = []
 V = []

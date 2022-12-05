@@ -78,7 +78,7 @@ class SPKF:
         xhat[self.zInd] = np.clip(xhat[self.zInd], -0.05, 1.05)
 
         # Step 2c: Error covariance measurement update
-        SigmaX = SigmaX - L*SigmaY*L.T
+        SigmaX = SigmaX - L@SigmaY@L.T
         _,S,V = np.linalg.svd(SigmaX)
         HH = V.T@np.diag(S)@V
         SigmaX = (SigmaX + SigmaX.T + HH + HH.T)/4 # Help maintain robustness

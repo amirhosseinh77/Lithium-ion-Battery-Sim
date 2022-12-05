@@ -64,8 +64,8 @@ class BarDelta_SPKF:
         self.dz = np.zeros(self.NUM_CELL)
         self.Sdz = SigmaX0[self.zInd, self.zInd]*np.ones(self.NUM_CELL)
         
-        self.dR0 = np.arange(1.3, 1, -0.1)*1e-3 - self.R0Param_bar
-        self.dQinv = np.arange(25, 29, 1) - self.QinvParam_bar
+        self.dR0 = self.R0Param_bar - np.arange(1.3, 1, -0.1)*1e-3
+        self.dQinv = 1/np.arange(25, 29, 1) - self.QinvParam_bar
 
     def iter_bar(self, ik, vk):
         # Step 1a : State estimate time update
@@ -120,7 +120,7 @@ class BarDelta_SPKF:
             print('Bumping sigmax\n')
             SigmaX[self.zInd, self.zInd] = SigmaX[self.zInd, self.zInd]*self.Qbump
 
-        self.priorI = ik
+        # self.priorI = ik
         # Save data in spkfData structure for next time...
         self.SigmaX = SigmaX
         self.xhat = xhat
@@ -134,40 +134,42 @@ class BarDelta_SPKF:
 
         
 
-    def iter_delta(self, ik, vk):
-        # Updating the delta-SOC SPKFs
-        ik = ik - self.ib
+    def iter_delta(self, ik, vk):    
+        # Updating the delta-SOC SPKFs 
         # delta-SOC
         for thecell in range(self.NUM_CELL):
             # Step 1a - State prediction time update
-            sigmaXa  = block_diag(self.Sdz[thecell], self.SigmaW[1,1])
-            sigmaXa  = np.real(cholesky(sigmaXa , lower=True))
+            sigmaXa  = block_diag(np.sqrt(np.maximum(0,self.Sdz[thecell])), np.sqrt(self.SigmaW[0,0]))
+            
+            # sigmaXa  = np.real(cholesky(sigmaXa , lower=True))
             xhata  = np.vstack([self.dz[thecell], np.zeros((self.dNw,1))])
-
+            
             Xa = xhata.reshape(self.dNa,1) + self.h*np.hstack([np.zeros((self.dNa, 1)), sigmaXa, -sigmaXa])
             # priorI is updated sooner!!!
-            Xx = self.deltazStateEqn(thecell, self.priorI, Xa[self.dNx:self.dNx+self.dNw,:], Xa[:self.dNx,:])
+            Xx = self.deltazStateEqn(thecell, self.priorI - self.ib, Xa[self.dNx:self.dNx+self.dNw,:], Xa[:self.dNx,:])
+            
             Xx = np.vstack(Xx)
             xhat  = Xx@self.dWm
-
+            
             # Step 1b - Do error covariance time update
             SigmaX = (Xx - xhat)@np.diag(self.dWc.ravel())@(Xx - xhat).T
-
+            
             # Step 1c - output estimate
-            Y = self.deltazOutputEqn(thecell, ik, Xa[self.dNx+self.dNw:,:], Xx)
+            Y = self.deltazOutputEqn(thecell, ik - self.ib, Xa[self.dNx:self.dNx+self.dNw,:], Xx)
             yhat = Y@self.dWm
 
             # Step 2a - Estimator gain matrix
             SigmaXY = (Xx - xhat)@np.diag(self.dWc.ravel())@(Xx - xhat).T
-            SigmaY = (Y - yhat)@np.diag(self.dWc.ravel())@(Y - yhat).T
+            SigmaY = (Y - yhat)@np.diag(self.dWc.ravel())@(Y - yhat).T + self.SigmaV
             L = SigmaXY/SigmaY
-
+            
             # Step 2b - State estimate measurement update
             self.dz[thecell] = xhat + L*(vk[thecell] - yhat) 
 
             # Step 2c - Error covariance measurement update
             self.Sdz[thecell] = SigmaX - L*SigmaY*L.T
-
+            
+        # print(self.Sdz[3])
         self.priorI = ik
 
 
@@ -221,6 +223,7 @@ class BarDelta_SPKF:
         return new_deltaz
 
     def deltazOutputEqn(self, thecell, current, ynoise, dz):
+        current = current + ynoise
         voltage = self.OCVfromSOC(self.xhat[self.zInd]+dz) \
                 + self.MParam*self.xhat[self.hInd] \
                 - self.RParam*self.xhat[self.iRInd] \
