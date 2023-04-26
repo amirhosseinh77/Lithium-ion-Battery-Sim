@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from elements.batteryModel import LithiumIonBattery, make_OCVfromSOCtemp, make_dOCVfromSOCtemp
-from elements.barDelta_temp import BarDelta_SPKF
+from elements.barDelta_temp_all_params import BarDelta_SPKF
 from scipy.linalg import block_diag, cholesky
 from copy import copy
 
@@ -89,22 +89,25 @@ dR0bound = np.zeros_like(voltage)   # and for bounds on those values
 
 # Covariance values
 # State ordering: ir,h,z,bias,R,Qinv
-SigmaX = block_diag(1e2, 1e-4, 1e-2, 5e-2)  # uncertainty of initial state (ir,h,z,bias)
-SigmaW = block_diag(1e-1, 1e-4)             # uncertainty of current sensor, bias
-SigmaV = block_diag(1e-3)                   # uncertainty of voltage sensor, output equation
+SigmaX = block_diag(1e2, 1e-4, 1e-2, 5e-2, 5e-2, 5e-2)  # uncertainty of initial state (ir,h,z,bias,R0,Qinv)
+SigmaW = block_diag(1e-1, 1e-4, 1e-4, 1e-4)             # uncertainty of current sensor, bias, R0, Qinv
+SigmaV = block_diag(1e-3)                               # uncertainty of voltage sensor, output equation
 
 
 Ztrues = [soc[0]]
 Zhats = []
 Zbounds = []
 ibhats = []
+rhats = []
+qinvhats = []
+
 DZS = []
 SCM1_SPKF = BarDelta_SPKF(batteryPack, SigmaX, SigmaW, SigmaV)
 
 
 for i in range(len(current)):
     
-    zhat, zbound, ibhat = SCM1_SPKF.iter_bar(current[i], voltage[i])
+    zhat, zbound, ibhat, rhat, qinvhat = SCM1_SPKF.iter_bar(current[i], voltage[i])
     SCM1_SPKF.iter_delta(current[i], voltage[i])
     # break
     # store data
@@ -112,6 +115,8 @@ for i in range(len(current)):
     Zhats.append(zhat)
     Zbounds.append(zbound)
     ibhats.append(ibhat)
+    rhats.append(rhat)
+    qinvhats.append(qinvhat)
     DZS.append(SCM1_SPKF.dz)
 
 
