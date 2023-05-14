@@ -5,12 +5,14 @@ from mat4py import loadmat
 class LithiumIonBattery:
     def __init__(self):
         self.ECM = ElectricalModel()
+        self.ThM = LumpedModel()
 
     def updateModel(self, current):
         pass
 
 class LithiumIonBattery:
-
+    def __init__(self):
+        pass
 
 class ElectricalModel:
     def __init__(self, model_path, T, dt):
@@ -114,8 +116,19 @@ def make_SOCfromOCVtemp(data, T):
 
 
 class LumpedModel:
-    def __init__(self):
-        pass
+    def __init__(self, dt):
+        self.Rc = 1e-2
+        self.Ru = 1e-2
+        self.Cs = 1e3
+        self.a1 = -1/(self.Rc*self.Cs)
+        self.a2 = -1/(self.Rc*self.Cs) - 1/(self.Ru*self.Cs)
 
-    def updateTemp(self, current):
-        pass
+        self.Tc = 25
+        self.Ts = 25
+        self.dt = dt
+
+    def updateTemp(self, Q, Tf):
+        u1 = (self.Ts/(self.Rc*self.Cs)) + Q/self.Cs
+        u2 = (self.Tc/(self.Rc*self.Cs)) + (Tf/(self.Ru*self.Cs))
+        self.Tc = np.exp(self.a1*self.dt) * self.Tc + (np.exp(self.a1*self.dt)-1)/self.a1 * u1
+        self.Ts = np.exp(self.a2*self.dt) * self.Ts + (np.exp(self.a2*self.dt)-1)/self.a2 * u2
