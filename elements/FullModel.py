@@ -4,15 +4,18 @@ from mat4py import loadmat
 
 class LithiumIonBattery:
     def __init__(self):
-        self.ECM = ElectricalModel()
-        self.ThM = LumpedModel()
+        self.ECM = ElectricalModel('models/PANmodel.mat', T=25, dt=1)
+        self.ThM = LumpedModel(T=25, dt=1)
 
-    def updateModel(self, current):
-        pass
+    def updateModel(self, current,Tf):
+        newState = self.ECM.stateEqn(current)
+        voltage = self.ECM.outputEqn(current)
+        self.ECM.updateState(newState)
 
-class LithiumIonBattery:
-    def __init__(self):
-        pass
+        Q = current*(self.ECM.OCVfromSOC(self.ECM.z_k)-voltage)
+        self.ThM.updateTemp(Q, Tf)
+
+
 
 class ElectricalModel:
     def __init__(self, model_path, T, dt):
@@ -116,15 +119,15 @@ def make_SOCfromOCVtemp(data, T):
 
 
 class LumpedModel:
-    def __init__(self, dt):
+    def __init__(self, T, dt):
         self.Rc = 1e-2
         self.Ru = 1e-2
         self.Cs = 1e3
         self.a1 = -1/(self.Rc*self.Cs)
         self.a2 = -1/(self.Rc*self.Cs) - 1/(self.Ru*self.Cs)
 
-        self.Tc = 25
-        self.Ts = 25
+        self.Tc = T
+        self.Ts = T
         self.dt = dt
 
     def updateTemp(self, Q, Tf):
