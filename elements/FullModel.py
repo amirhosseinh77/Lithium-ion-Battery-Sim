@@ -120,10 +120,11 @@ def make_SOCfromOCVtemp(data, T):
 
 class LumpedModel:
     def __init__(self, T, dt):
-        self.Rc = 1e-2
-        self.Ru = 1e-2
-        self.Cs = 1e3
-        self.a1 = -1/(self.Rc*self.Cs)
+        self.Rc = 1.94
+        self.Ru = 3.19
+        self.Cc = 62.7
+        self.Cs = 4.5
+        self.a1 = -1/(self.Rc*self.Cc)
         self.a2 = -1/(self.Rc*self.Cs) - 1/(self.Ru*self.Cs)
 
         self.Tc = T
@@ -131,7 +132,7 @@ class LumpedModel:
         self.dt = dt
 
     def updateTemp(self, Q, Tf):
-        u1 = (self.Ts/(self.Rc*self.Cs)) + Q/self.Cs
+        u1 = (self.Ts/(self.Rc*self.Cc)) + Q/self.Cc
         u2 = (self.Tc/(self.Rc*self.Cs)) + (Tf/(self.Ru*self.Cs))
         self.Tc = np.exp(self.a1*self.dt) * self.Tc + (np.exp(self.a1*self.dt)-1)/self.a1 * u1
         self.Ts = np.exp(self.a2*self.dt) * self.Ts + (np.exp(self.a2*self.dt)-1)/self.a2 * u2
