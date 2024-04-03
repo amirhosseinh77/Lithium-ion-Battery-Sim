@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mat4py import loadmat
 from scipy.linalg import block_diag
+import seaborn as sns
+sns.set_theme()
 
 data = loadmat('models/PANdata_P25.mat')
 time    = np.array(data['DYNData']['script1']['time'])  
@@ -51,14 +53,14 @@ print(f'Percent of time error outside bounds = {(np.sum(abs(Ztrues[:-1]-Zhats)>Z
 plt.figure()
 plt.subplot(2,2,1)
 plt.plot(time,current)
-plt.grid()
+plt.grid('on')
 plt.title('Current')
 # plt.xlabel('Time (min)')
 plt.ylabel('Current (A)')
 
 plt.subplot(2,2,2)
 plt.plot(time/60,voltage)
-plt.grid()
+plt.grid('on')
 plt.title('Voltage')
 # plt.xlabel('Time (min)')
 plt.ylabel('Votltage (V)')
@@ -67,7 +69,7 @@ plt.subplot(2,2,3)
 plt.plot(time/60,100*Ztrues[:-1],color=(0,0.8,0))
 plt.plot(time/60,100*Zhats,color=(0,0,1),linestyle='dashed')
 plt.fill_between(time/60, 100*(Zhats+Zbounds), 100*(Zhats-Zbounds), alpha=0.3)
-plt.grid()
+plt.grid('on')
 plt.legend(['Truth','Estimate','Bounds'])
 plt.title('SOC estimation using SPKF')
 plt.xlabel('Time (min)')
@@ -77,7 +79,7 @@ plt.subplot(2,2,4)
 estErr = Ztrues[:-1]-Zhats 
 plt.plot(time/60, 100*estErr)
 plt.fill_between(time/60, 100*Zbounds, -100*Zbounds, alpha=0.3)
-plt.grid()
+plt.grid('on')
 plt.legend(['Estimation error','Bounds'])
 plt.title('SOC estimation errors using SPKF')
 plt.xlabel('Time (min)') 
