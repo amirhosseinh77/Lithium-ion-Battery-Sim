@@ -52,7 +52,7 @@ print(f'Percent of time error outside bounds = {(np.sum(abs(Ztrues[:-1]-Zhats)>Z
 # plot diagrams
 plt.figure()
 plt.subplot(2,2,1)
-plt.plot(time,current)
+plt.plot(time/60,current)
 plt.grid('on')
 plt.title('Current')
 # plt.xlabel('Time (min)')
